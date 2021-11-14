@@ -9,6 +9,8 @@
 #include "freertos/queue.h"
 #include "driver/gpio.h"
 
+#include "test_dht.h"
+
 #define GPIO_OUTPUT_IO_0    18
 #define GPIO_OUTPUT_IO_1    19
 #define GPIO_OUTPUT_PIN_SEL  ((1ULL<<GPIO_OUTPUT_IO_0) | (1ULL<<GPIO_OUTPUT_IO_1))
@@ -55,7 +57,7 @@ static void gpio_task_example(void* arg)
 
 
 
-void app_main(void)
+void generic_gpio(void)
 {
     /* configure output pins */
     gpio_config_t io_conf;
@@ -107,5 +109,31 @@ void app_main(void)
         vTaskDelay(1000 / portTICK_RATE_MS);
         gpio_set_level(GPIO_OUTPUT_IO_0, cnt % 2);
         gpio_set_level(GPIO_OUTPUT_IO_1, cnt % 2);
+    }
+}
+
+void app_main(void)
+{
+    const int generic = 0;
+
+    switch (generic) {
+        case 0:
+            generic_gpio();
+            break;
+
+        case 1:
+        /* not working so far :-(
+        test_dht_init();
+        int cnt = 0;
+        while(1) {
+            printf("cnt: %d\n", cnt++);
+            vTaskDelay(3000 / portTICK_RATE_MS);
+            test_dht(GPIO_INPUT_IO_0);
+        }
+        */
+            break;
+
+        case 2:
+            break;
     }
 }

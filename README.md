@@ -18,11 +18,13 @@ https://download.kamami.pl/p579575-esp32-wroom-32d_esp32-wroom-32u_datasheet_en.
 
 https://dl.btc.pl/kamami_wa/dht22_ds.pdf
 
-## Building instructions
+## Build instructions (Linux)
 
 ```
 idf.py set-target esp32
 idf.py menuconfig
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
+# ... then
+idf.py -p /dev/ttyUSB0 monitor
 ```

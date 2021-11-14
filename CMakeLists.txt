@@ -4,5 +4,7 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
+# not required ... set(EXTRA_COMPONENT_DIRS components/test_dht)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp32_dht22)

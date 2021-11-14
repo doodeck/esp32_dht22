@@ -1,5 +1,6 @@
 /* esp32_dht22.c */
 
+// gpio specific
 #include <stdio.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,6 +11,15 @@
 #include "driver/gpio.h"
 
 #include "test_dht.h"
+
+// dht library specific
+#include "esp_system.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include "esp_log.h"
+#include "DHT.h"
+static const char *TAG = "DHT";
+
 
 #define GPIO_OUTPUT_IO_0    18
 #define GPIO_OUTPUT_IO_1    19
@@ -54,8 +64,6 @@ static void gpio_task_example(void* arg)
         }
     }
 }
-
-
 
 void generic_gpio(void)
 {
@@ -112,9 +120,29 @@ void generic_gpio(void)
     }
 }
 
+static void DHT_task(void *pvParameter)
+{
+    setDHTgpio(4);
+    ESP_LOGI(TAG, "Starting DHT Task\n\n");
+
+    while (1)
+    {
+        ESP_LOGI(TAG, "=== Reading DHT ===\n");
+        int ret = readDHT();
+
+        errorHandler(ret);
+
+        ESP_LOGI(TAG, "Hum: %.1f Tmp: %.1f\n", getHumidity(), getTemperature());
+
+        // -- wait at least 2 sec before reading again ------------
+        // The interval of whole process must be beyond 2 seconds !!
+        vTaskDelay(2000 / portTICK_RATE_MS);
+    }
+}
+
 void app_main(void)
 {
-    const int generic = 0;
+    const int generic = 2;
 
     switch (generic) {
         case 0:
@@ -134,6 +162,20 @@ void app_main(void)
             break;
 
         case 2:
+            //Initialize NVS
+            {
+            esp_err_t ret = nvs_flash_init();
+            if (ret == ESP_ERR_NVS_NO_FREE_PAGES)
+            {
+                ESP_ERROR_CHECK(nvs_flash_erase());
+                ret = nvs_flash_init();
+            }
+            ESP_ERROR_CHECK(ret);
+
+            esp_log_level_set("*", ESP_LOG_INFO);
+
+            xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+            }
             break;
     }
 }

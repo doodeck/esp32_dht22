@@ -53,4 +53,4 @@ dkms.conf
 
 # esp32 specific
 build/
-sdkconfig
+sdkconfig*

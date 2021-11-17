@@ -127,6 +127,12 @@ void generic_gpio(void)
     }
 }
 
+static xQueueHandle dht_evt_queue = NULL;
+typedef struct {
+    float humidity;
+    float temperature;
+} dht_evt_t;
+
 static void DHT_task(void *pvParameter)
 {
     setDHTgpio(4);
@@ -144,6 +150,33 @@ static void DHT_task(void *pvParameter)
         // -- wait at least 2 sec before reading again ------------
         // The interval of whole process must be beyond 2 seconds !!
         vTaskDelay(2000 / portTICK_RATE_MS);
+    }
+}
+
+static void DHT_task_queue(void *pvParameter)
+{
+    setDHTgpio(4);
+    ESP_LOGI(TAG, "Starting DHT Queue Task\n\n");
+
+    while (1)
+    {
+        ESP_LOGI(TAG, "=== Reading DHT ===\n");
+        int ret = readDHT();
+
+        errorHandler(ret);
+
+        dht_evt_t io_evt;
+        io_evt.humidity = getHumidity();
+        io_evt.temperature = getTemperature();
+
+        ESP_LOGI(TAG, "Hum: %.1f Tmp: %.1f\n", io_evt.humidity, io_evt.temperature);
+
+        xQueueSendFromISR(dht_evt_queue, &io_evt, NULL);
+
+
+        // -- wait at least 2 sec before reading again ------------
+        // The interval of whole process must be beyond 2 seconds !!
+        vTaskDelay(5000 / portTICK_RATE_MS);
     }
 }
 
@@ -255,12 +288,15 @@ static void https_with_hostname_path(void)
     esp_http_client_cleanup(client);
 }
 
-static void https_heroku_with_hostname_path(void)
+static void https_heroku_with_hostname_path(dht_evt_t *p_dht_evt)
 {
+    char query[128];
+    sprintf(query, "hum=%.1f&temp=%.1f", p_dht_evt->humidity, p_dht_evt->temperature);
+
     esp_http_client_config_t config = {
         .host = "iot-dht22.herokuapp.com",
         .path = "/",
-        .query = "hum=66&temp=55",
+        .query = query,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
         .event_handler = _http_event_handler,
         .cert_pem = iot_dht22_herokuapp_com_root_cert_pem_start,
@@ -282,15 +318,29 @@ static void https_heroku_with_hostname_path(void)
 static void http_test_task(void *pvParameters)
 {
     https_with_hostname_path();
-    https_heroku_with_hostname_path();
+    // https_heroku_with_hostname_path();
 
     ESP_LOGI(TAG, "Finish https example");
     vTaskDelete(NULL);
 }
 
+static void http_test_task_queue(void *pvParameters)
+{
+    dht_evt_t io_dht_evt;
+    for(;;) {
+        if(xQueueReceive(dht_evt_queue, &io_dht_evt, portMAX_DELAY)) {
+            printf("Event, humidity: %.1f, temperature: %.1f\n", io_dht_evt.humidity, io_dht_evt.temperature);
+            https_heroku_with_hostname_path(&io_dht_evt);
+        }
+    }
+
+    // ESP_LOGI(TAG, "Finish https example");
+    // vTaskDelete(NULL);
+}
+
 void app_main(void)
 {
-    const int generic = 3;
+    const int generic = 4;
 
     switch (generic) {
         case 0:
@@ -345,6 +395,34 @@ void app_main(void)
             ESP_LOGI(TAG, "Connected to AP, begin http example");
 
             xTaskCreate(&http_test_task, "http_test_task", 8192, NULL, 5, NULL);
+            }
+            break;
+
+        case 4:
+            {
+            esp_err_t ret = nvs_flash_init();
+            if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+            ESP_ERROR_CHECK(nvs_flash_erase());
+            ret = nvs_flash_init();
+            }
+            ESP_ERROR_CHECK(ret);
+            // esp_log_level_set("*", ESP_LOG_INFO);
+
+            ESP_ERROR_CHECK(esp_netif_init());
+            ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+            /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+            * Read "Establishing Wi-Fi or Ethernet Connection" section in
+            * examples/protocols/README.md for more information about this function.
+            */
+            ESP_ERROR_CHECK(example_connect());
+            ESP_LOGI(TAG, "Connected to AP, begin http example");
+
+            dht_evt_queue = xQueueCreate(10, sizeof(dht_evt_t));
+
+            xTaskCreate(&http_test_task_queue, "http_test_task_queue", 8192, NULL, 5, NULL);
+
+            xTaskCreate(&DHT_task_queue, "DHT_task_queue", 2048, NULL, 5, NULL);
             }
             break;
     }

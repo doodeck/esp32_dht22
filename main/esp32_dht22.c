@@ -31,9 +31,13 @@ static const char *TAG = "DHT";
 #define GPIO_INPUT_IO_1     5
 
 const int gpio_inputs[] = {
-    GPIO_INPUT_IO_0
+    GPIO_INPUT_IO_0,
+    GPIO_INPUT_IO_1
 };
 const int gpio_input_cnt = sizeof(gpio_inputs) / sizeof (gpio_inputs[0]);
+
+// -- wait at least 2 sec before reading again ------------
+const int gpio_pull_interval = 5000; // milliseconds
 
 static xQueueHandle dht_evt_queue = NULL;
 typedef struct {
@@ -77,18 +81,20 @@ static void DHT_task_queue(void *pvParameter)
 
         errorHandler(ret);
 
-        dht_evt_t io_evt;
-        io_evt.gpio_input = gpio_input;
-        io_evt.humidity = getHumidity();
-        io_evt.temperature = getTemperature();
+        if (DHT_OK == ret) {
+            dht_evt_t io_evt;
+            io_evt.gpio_input = gpio_input;
+            io_evt.humidity = getHumidity();
+            io_evt.temperature = getTemperature();
 
-        ESP_LOGI(TAG, "Input: %d, Hum: %.1f Tmp: %.1f\n", io_evt.gpio_input, io_evt.humidity, io_evt.temperature);
+            ESP_LOGI(TAG, "Input: %d, Hum: %.1f Tmp: %.1f\n", io_evt.gpio_input, io_evt.humidity, io_evt.temperature);
 
-        xQueueSendFromISR(dht_evt_queue, &io_evt, NULL);
+            xQueueSendFromISR(dht_evt_queue, &io_evt, NULL);
+        }
 
         // -- wait at least 2 sec before reading again ------------
         // The interval of whole process must be beyond 2 seconds !!
-        vTaskDelay(60000 / portTICK_RATE_MS);
+        vTaskDelay(gpio_pull_interval / portTICK_RATE_MS);
         counter++;
     }
 }
@@ -245,7 +251,7 @@ static void http_test_task_queue(void *pvParameters)
         if(xQueueReceive(dht_evt_queue, &io_dht_evt, portMAX_DELAY)) {
             printf("Event, input: %d, humidity: %.1f, temperature: %.1f\n",
                    io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
-            https_heroku_with_hostname_path(&io_dht_evt);
+            // TODO https_heroku_with_hostname_path(&io_dht_evt);
         }
     }
 

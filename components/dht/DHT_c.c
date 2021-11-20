@@ -84,7 +84,7 @@ int getSignalLevel(int usTimeOut, bool state)
     {
 
         if (uSec > usTimeOut)
-            return -1;
+            return -uSec;
 
         ++uSec;
         ets_delay_us(1); // uSec delay
@@ -160,19 +160,25 @@ int readDHT()
 
     gpio_set_direction(DHTgpio, GPIO_MODE_INPUT); // change to input mode
 
+    /*esp_err_t*/ gpio_pullup_en(DHTgpio); // removed the physical 10k pullup resistor and getting occasional "E (324578) DHT: Sensor Timeout"
+
     // == DHT will keep the line low for 80 us and then high for 80us ====
 
     uSec = getSignalLevel(85, 0);
     // ESP_LOGI(TAG, "Response = %d", uSec);
-    if (uSec < 0)
+    if (uSec < 0) {
+        ESP_LOGE(TAG, "Timeout: %d", -uSec);
         return DHT_TIMEOUT_ERROR;
+    }
 
     // -- 80us up ------------------------
 
     uSec = getSignalLevel(85, 1);
     // ESP_LOGI(TAG, "Response = %d", uSec);
-    if (uSec < 0)
+    if (uSec < 0) {
+        ESP_LOGE(TAG, "Timeout2: %d", -uSec);
         return DHT_TIMEOUT_ERROR;
+    }
 
     // == No errors, read the 40 data bits ================
 
@@ -182,15 +188,17 @@ int readDHT()
         // -- starts new data transmission with >50us low signal
 
         uSec = getSignalLevel(56, 0);
-        if (uSec < 0)
+        if (uSec < 0) {
+            ESP_LOGE(TAG, "Timeout3: %d", -uSec);
             return DHT_TIMEOUT_ERROR;
-
+        }
         // -- check to see if after >70us rx data is a 0 or a 1
 
         uSec = getSignalLevel(75, 1);
-        if (uSec < 0)
+        if (uSec < 0) {
+            ESP_LOGE(TAG, "Timeout4: %d", -uSec);
             return DHT_TIMEOUT_ERROR;
-
+        }
         // add the current read to the output data
         // since all dhtData array where set to 0 at the start,
         // only look for "1" (>28us us)

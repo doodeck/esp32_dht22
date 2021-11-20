@@ -82,7 +82,7 @@ static void DHT_task_queue(void *pvParameter)
 
         ESP_LOGI(TAG, "=== Reading DHT (%d) ===\n", gpio_input);
         int ret = readDHT();
-        time_t seconds = time(NULL);
+        // time_t seconds = time(NULL);
 
         errorHandler(ret);
 
@@ -213,10 +213,10 @@ static void https_with_hostname_path(void)
     esp_http_client_cleanup(client);
 }
 
-static void https_heroku_with_hostname_path(dht_evt_t *p_dht_evt)
+static void https_heroku_with_hostname_path(const char *chipId, dht_evt_t *p_dht_evt)
 {
     char query[128];
-    sprintf(query, "in=%02d&hum=%.1f&temp=%.1f", p_dht_evt->gpio_input, p_dht_evt->humidity, p_dht_evt->temperature);
+    sprintf(query, "id=%s&in=%02d&hum=%.1f&temp=%.1f", chipId, p_dht_evt->gpio_input, p_dht_evt->humidity, p_dht_evt->temperature);
     ESP_LOGI(TAG, "Query: %s", query);
 
     esp_http_client_config_t config = {
@@ -252,12 +252,20 @@ static void http_test_task(void *pvParameters)
 
 static void http_test_task_queue(void *pvParameters)
 {
+    // get board's unique id (MAC address)
+    uint8_t chipid[6];
+    char s_chipid[18]; // need only 2 * 6 = 12
+    esp_read_mac(chipid, ESP_MAC_WIFI_STA);
+    ESP_LOGI(TAG, "%02x:%02x:%02x:%02x:%02x:%02x",chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
+    sprintf(s_chipid, "%02x%02x%02x%02x%02x%02x",chipid[0], chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
+
     dht_evt_t io_dht_evt;
     for(;;) {
         if(xQueueReceive(dht_evt_queue, &io_dht_evt, portMAX_DELAY)) {
-            printf("Event, input: %d, humidity: %.1f, temperature: %.1f\n",
-                   io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
-            // TODO https_heroku_with_hostname_path(&io_dht_evt);
+            printf("Event, id: %s, input: %d, humidity: %.1f, temperature: %.1f\n",
+                   s_chipid, io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
+            // TODO 
+            https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
         }
     }
 

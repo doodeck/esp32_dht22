@@ -26,9 +26,12 @@ static const char *TAG = "DHT";
 #include "esp_tls.h"
 
 #include "esp_http_client.h"
+#include <time.h>
 
-#define GPIO_INPUT_IO_0     4
-#define GPIO_INPUT_IO_1     5
+
+#define GPIO_INPUT_IO_0     23
+#define GPIO_INPUT_IO_1     22
+ // working with IO4 and IO5 was causing occasional "E (324578) DHT: Sensor Timeout" errors
 
 const int gpio_inputs[] = {
     GPIO_INPUT_IO_0,
@@ -41,6 +44,7 @@ const int gpio_pull_interval = 5000; // milliseconds
 
 static xQueueHandle dht_evt_queue = NULL;
 typedef struct {
+    // TODO: synchronize with NTP first int timestamp; // Unix timestamp
     int gpio_input;
     float humidity;
     float temperature;
@@ -78,11 +82,13 @@ static void DHT_task_queue(void *pvParameter)
 
         ESP_LOGI(TAG, "=== Reading DHT (%d) ===\n", gpio_input);
         int ret = readDHT();
+        time_t seconds = time(NULL);
 
         errorHandler(ret);
 
         if (DHT_OK == ret) {
             dht_evt_t io_evt;
+            // io_evt.timestamp = seconds;
             io_evt.gpio_input = gpio_input;
             io_evt.humidity = getHumidity();
             io_evt.temperature = getTemperature();

@@ -160,7 +160,8 @@ int readDHT()
 
     gpio_set_direction(DHTgpio, GPIO_MODE_INPUT); // change to input mode
 
-    /*esp_err_t*/ gpio_pullup_en(DHTgpio); // removed the physical 10k pullup resistor and getting occasional "E (324578) DHT: Sensor Timeout"
+    /*esp_err_t gpio_pullup_en(DHTgpio);
+    no pullups on WROOM-32series: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/sd_pullup_requirements.html#modules */ 
 
     // == DHT will keep the line low for 80 us and then high for 80us ====
 

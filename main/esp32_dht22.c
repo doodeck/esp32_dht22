@@ -31,7 +31,6 @@ static const char *TAG = "DHT";
 
 #define GPIO_INPUT_IO_0     23
 #define GPIO_INPUT_IO_1     22
- // working with IO4 and IO5 was causing occasional "E (324578) DHT: Sensor Timeout" errors
 
 const int gpio_inputs[] = {
     GPIO_INPUT_IO_0,
@@ -41,6 +40,9 @@ const int gpio_input_cnt = sizeof(gpio_inputs) / sizeof (gpio_inputs[0]);
 
 // -- wait at least 2 sec before reading again ------------
 const int gpio_pull_interval = 5000; // milliseconds
+
+const int gpio_retry_cnt = 1; // when read error, typically "E (324578) DHT: Sensor Timeout" errors, retry number of times
+const int gpio_retry_delay = 5000; // milliseconds between retries
 
 static xQueueHandle dht_evt_queue = NULL;
 typedef struct {
@@ -80,11 +82,18 @@ static void DHT_task_queue(void *pvParameter)
         int gpio_input = gpio_inputs[counter % gpio_input_cnt];
         setDHTgpio(gpio_input);
 
-        ESP_LOGI(TAG, "=== Reading DHT (%d) ===\n", gpio_input);
-        int ret = readDHT();
-        // time_t seconds = time(NULL);
+        int ret, retry = 0;
+        do {
+            ESP_LOGI(TAG, "=== [Re]reading DHT (%d) ===\n", gpio_input);
+            ret = readDHT();
+            // time_t seconds = time(NULL);
 
-        errorHandler(ret);
+            errorHandler(ret);
+            if (DHT_OK != ret) {
+                vTaskDelay(gpio_retry_delay / portTICK_RATE_MS);
+            }
+            retry++;
+        } while (DHT_OK != ret && retry <= gpio_retry_cnt);
 
         if (DHT_OK == ret) {
             dht_evt_t io_evt;
@@ -264,8 +273,7 @@ static void http_test_task_queue(void *pvParameters)
         if(xQueueReceive(dht_evt_queue, &io_dht_evt, portMAX_DELAY)) {
             printf("Event, id: %s, input: %d, humidity: %.1f, temperature: %.1f\n",
                    s_chipid, io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
-            // TODO 
-            https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
+            // TODO             https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
         }
     }
 

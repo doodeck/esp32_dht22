@@ -39,7 +39,7 @@ const int gpio_inputs[] = {
 const int gpio_input_cnt = sizeof(gpio_inputs) / sizeof (gpio_inputs[0]);
 
 // -- wait at least 2 sec before reading again ------------
-const int gpio_pull_interval = 5000; // milliseconds
+const int gpio_pull_interval = 180000; // milliseconds
 
 const int gpio_retry_cnt = 1; // when read error, typically "E (324578) DHT: Sensor Timeout" errors, retry number of times
 const int gpio_retry_delay = 5000; // milliseconds between retries
@@ -273,7 +273,8 @@ static void http_test_task_queue(void *pvParameters)
         if(xQueueReceive(dht_evt_queue, &io_dht_evt, portMAX_DELAY)) {
             printf("Event, id: %s, input: %d, humidity: %.1f, temperature: %.1f\n",
                    s_chipid, io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
-            // TODO             https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
+            // TODO
+            https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
         }
     }
 

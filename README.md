@@ -21,6 +21,7 @@ https://dl.btc.pl/kamami_wa/dht22_ds.pdf
 ## Build instructions (Linux)
 
 ```
+# unless already done: . $HOME/esp/esp-idf/export.sh
 idf.py set-target esp32
 idf.py menuconfig
 idf.py build

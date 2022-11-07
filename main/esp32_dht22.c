@@ -129,6 +129,8 @@ extern const char howsmyssl_com_root_cert_pem_start[] asm("_binary_howsmyssl_com
 extern const char howsmyssl_com_root_cert_pem_end[]   asm("_binary_howsmyssl_com_root_cert_pem_end");
 extern const char iot_dht22_herokuapp_com_root_cert_pem_start[] asm("_binary_iot_dht22_herokuapp_com_root_cert_pem_start");
 extern const char iot_dht22_herokuapp_com_root_cert_pem_end[] asm("_binary_iot_dht22_herokuapp_com_root_cert_pem_end");
+extern const char next_dht22_vercel_app_root_cert_pem_start[] asm("_binary_next_dht22_vercel_app_root_cert_pem_start");
+extern const char next_dht22_vercel_app_root_cert_pem_end[] asm("_binary_next_dht22_vercel_app_root_cert_pem_end");
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
@@ -222,19 +224,19 @@ static void https_with_hostname_path(void)
     esp_http_client_cleanup(client);
 }
 
-static void https_heroku_with_hostname_path(const char *chipId, dht_evt_t *p_dht_evt)
+static void https_backend_with_hostname_path(const char *chipId, dht_evt_t *p_dht_evt)
 {
     char query[128];
     sprintf(query, "id=%s&in=%02d&hum=%.1f&temp=%.1f", chipId, p_dht_evt->gpio_input, p_dht_evt->humidity, p_dht_evt->temperature);
     ESP_LOGI(TAG, "Query: %s", query);
 
     esp_http_client_config_t config = {
-        .host = "iot-dht22.herokuapp.com",
-        .path = "/",
+        .host = "test-next-dht22-h50oxzplg-doodeck.vercel.app", // "next-dht22.vercel.app"
+        .path = "/api/be/iot",
         .query = query,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,
         .event_handler = _http_event_handler,
-        .cert_pem = iot_dht22_herokuapp_com_root_cert_pem_start,
+        .cert_pem = next_dht22_vercel_app_root_cert_pem_start,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -274,7 +276,7 @@ static void http_test_task_queue(void *pvParameters)
             printf("Event, id: %s, input: %d, humidity: %.1f, temperature: %.1f\n",
                    s_chipid, io_dht_evt.gpio_input, io_dht_evt.humidity, io_dht_evt.temperature);
             // TODO
-            https_heroku_with_hostname_path(s_chipid, &io_dht_evt);
+            https_backend_with_hostname_path(s_chipid, &io_dht_evt);
         }
     }
 

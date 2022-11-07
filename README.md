@@ -29,3 +29,6 @@ idf.py -p /dev/ttyUSB0 flash monitor
 # ... then
 idf.py -p /dev/ttyUSB0 monitor
 ```
+Useful commands while the monitor is running:
+* Ctrl+] - Interrupt and quit monitor
+* Ctrl-T / Ctrl+H - display useful keyboard shortcuts

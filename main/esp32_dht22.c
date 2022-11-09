@@ -231,7 +231,7 @@ static void https_backend_with_hostname_path(const char *chipId, dht_evt_t *p_dh
     ESP_LOGI(TAG, "Query: %s", query);
 
     esp_http_client_config_t config = {
-        .host = "test-next-dht22-h50oxzplg-doodeck.vercel.app", // "next-dht22.vercel.app"
+        .host = "test-next-dht22.vercel.app", // "next-dht22.vercel.app"
         .path = "/api/be/iot",
         .query = query,
         .transport_type = HTTP_TRANSPORT_OVER_SSL,

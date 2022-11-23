@@ -54,3 +54,6 @@ dkms.conf
 # esp32 specific
 build/
 sdkconfig*
+
+# MacOS specific
+.DS_Store

@@ -1,6 +1,7 @@
 # esp32_dht22
 DHT22 -> ESP32 -> https: IoT Project
 
+![](img/ReferenceDesign.jpg)
 
 ## ESP 32 Getting Started
 
